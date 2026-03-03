@@ -1,12 +1,10 @@
 import os
 import time
 import telebot
-from keep_alive import keep_alive
 
 TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(TOKEN, parse_mode="HTML")
 
-# Thumb saqlash
 user_thumb = {}   # {user_id: file_id}
 
 
@@ -56,48 +54,52 @@ def save_thumb(msg):
 
 
 # ============================
-# VIDEO QABUL QILISH
+# VIDEO QABUL QILISH → yuklab olish → nomini o‘zgartirish → thumb qo‘yish → qayta yuklash
 # ============================
 @bot.message_handler(content_types=['video'])
 def video_process(msg):
     uid = msg.from_user.id
     video = msg.video
 
-    # Yangi nom — faqat @AniGonUz.mp4
     new_name = "@AniGonUz.mp4"
 
-    # Jarayonni boshlash
     bot.send_message(
         uid,
         f"🎬 <b>Video qabul qilindi</b>\n"
         f"📌 Turi: Video\n"
         f"📄 Yangi nom: <code>{new_name}</code>\n"
-        f"⏳ Tayyor: 0%\n"
-        f"⌛ Hisoblanmoqda..."
+        f"⏳ Tayyor: 0%"
     )
 
     start = time.time()
 
-    # 50% holat
+    # 1) Videoni yuklab olish
+    file_info = bot.get_file(video.file_id)
+    downloaded = bot.download_file(file_info.file_path)
+
+    with open(new_name, "wb") as f:
+        f.write(downloaded)
+
     bot.send_message(uid, "⏳ Tayyor: 50%")
 
-    # Thumb bo‘lsa qo‘shamiz
+    # 2) Thumb bo‘lsa qo‘shamiz
     thumb = user_thumb.get(uid)
 
-    # Videoni qayta yuborish (yuklab olish shart emas!)
-    bot.send_video(
-        uid,
-        video.file_id,
-        caption=msg.caption,   # caption o‘zgarmaydi!
-        thumb=thumb,
-        supports_streaming=True,
-        file_name=new_name     # ASOSIY JOY — video nomi o‘zgaradi!
-    )
+    # 3) Videoni qayta yuklash
+    with open(new_name, "rb") as f:
+        bot.send_video(
+            uid,
+            f,
+            caption=msg.caption,
+            thumb=thumb,
+            supports_streaming=True
+        )
 
-    end = time.time()
-    duration = int(end - start)
+    # 4) Faylni o‘chirish
+    os.remove(new_name)
 
-    # Yakuniy xabar
+    duration = int(time.time() - start)
+
     bot.send_message(
         uid,
         f"✅ Tayyor: 100%\n"
@@ -110,14 +112,12 @@ def video_process(msg):
 # ============================
 @bot.message_handler(content_types=['document'])
 def ignore_files(msg):
-    pass  # jim turadi
+    pass
 
 
 # ============================
 # BOTNI ISHGA TUSHIRISH
 # ============================
-keep_alive()
-
 while True:
     try:
         bot.infinity_polling(timeout=60, long_polling_timeout=60)
