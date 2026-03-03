@@ -30,10 +30,10 @@ def thumb_cmd(msg):
     uid = msg.from_user.id
 
     if uid not in user_thumb:
-        bot.send_message(uid, "Thumb rasm mavjud emas. Rasm yuboring — saqlab qo‘yaman.")
+        bot.send_message(uid, "Rasm mavjud emas. Rasmni hozir yuboring — saqlab qo‘yaman.")
         return
 
-    bot.send_photo(uid, user_thumb[uid], caption="Saqlangan thumb rasm.")
+    bot.send_photo(uid, user_thumb[uid], caption="Saqlangan rasm.")
 
 
 # ============================
@@ -43,7 +43,7 @@ def thumb_cmd(msg):
 def deletthumb_cmd(msg):
     uid = msg.from_user.id
     user_thumb.pop(uid, None)
-    bot.send_message(uid, "Thumb rasm o‘chirildi.")
+    bot.send_message(uid, "Rasm o‘chirildi.")
 
 
 # ============================
@@ -53,7 +53,7 @@ def deletthumb_cmd(msg):
 def save_thumb(msg):
     uid = msg.from_user.id
     user_thumb[uid] = msg.photo[-1].file_id
-    bot.reply_to(msg, "Rasm thumb sifatida saqlandi.")
+    bot.reply_to(msg, "Rasm saqlandi.")
 
 
 # ============================
@@ -64,8 +64,8 @@ def video_process(msg):
     uid = msg.from_user.id
     video = msg.video
 
-    # Yangi nom
-    new_name = f"{video.file_unique_id}.mp4"
+    # Yangi nom — faqat @AniGonUz.mp4
+    new_name = "@AniGonUz.mp4"
 
     # Jarayonni boshlash
     bot.send_message(
@@ -74,17 +74,10 @@ def video_process(msg):
         f"📌 Turi: Video\n"
         f"📄 Yangi nom: <code>{new_name}</code>\n"
         f"⏳ Tayyor: 0%\n"
-        f"⌛ Taxminiy vaqt: 5–10 soniya"
+        f"⌛ Hisoblanmoqda..."
     )
 
-    # Yuklab olish
     start = time.time()
-    file_info = bot.get_file(video.file_id)
-    downloaded = bot.download_file(file_info.file_path)
-
-    # Saqlash
-    with open(new_name, "wb") as f:
-        f.write(downloaded)
 
     # 50% holat
     bot.send_message(uid, "⏳ Tayyor: 50%")
@@ -92,16 +85,13 @@ def video_process(msg):
     # Thumb bo‘lsa qo‘shamiz
     thumb = user_thumb.get(uid)
 
-    # Yuborish
+    # Videoni qayta yuborish (yuklab olish shart emas!)
     bot.send_video(
         uid,
-        open(new_name, "rb"),
-        caption=f"{new_name}",
+        video.file_id,
+        caption=new_name,
         thumb=thumb
     )
-
-    # O‘chirish
-    os.remove(new_name)
 
     end = time.time()
     duration = int(end - start)
