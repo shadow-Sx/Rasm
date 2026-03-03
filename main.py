@@ -1,7 +1,6 @@
 import os
 import time
 import telebot
-from telebot import types
 from keep_alive import keep_alive
 
 TOKEN = os.getenv("BOT_TOKEN")
@@ -30,10 +29,10 @@ def thumb_cmd(msg):
     uid = msg.from_user.id
 
     if uid not in user_thumb:
-        bot.send_message(uid, "Rasm mavjud emas. Rasmni hozir yuboring — saqlab qo‘yaman.")
+        bot.send_message(uid, "Thumb rasm mavjud emas. Rasm yuboring — saqlab qo‘yaman.")
         return
 
-    bot.send_photo(uid, user_thumb[uid], caption="Saqlangan rasm.")
+    bot.send_photo(uid, user_thumb[uid], caption="Saqlangan thumb rasm.")
 
 
 # ============================
@@ -43,7 +42,7 @@ def thumb_cmd(msg):
 def deletthumb_cmd(msg):
     uid = msg.from_user.id
     user_thumb.pop(uid, None)
-    bot.send_message(uid, "Rasm o‘chirildi.")
+    bot.send_message(uid, "Thumb rasm o‘chirildi.")
 
 
 # ============================
@@ -53,7 +52,7 @@ def deletthumb_cmd(msg):
 def save_thumb(msg):
     uid = msg.from_user.id
     user_thumb[uid] = msg.photo[-1].file_id
-    bot.reply_to(msg, "Rasm saqlandi.")
+    bot.reply_to(msg, "Rasm thumb sifatida saqlandi.")
 
 
 # ============================
@@ -89,8 +88,10 @@ def video_process(msg):
     bot.send_video(
         uid,
         video.file_id,
-        caption=new_name,
-        thumb=thumb
+        caption=msg.caption,   # caption o‘zgarmaydi!
+        thumb=thumb,
+        supports_streaming=True,
+        file_name=new_name     # ASOSIY JOY — video nomi o‘zgaradi!
     )
 
     end = time.time()
