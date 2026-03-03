@@ -4,24 +4,19 @@ import time
 import os
 from keep_alive import keep_alive
 
-# ============================
-# CONFIG
-# ============================
 TOKEN = os.getenv("BOT_TOKEN")
 ADMINS = [7797502113]
 
 bot = telebot.TeleBot(TOKEN, parse_mode="HTML")
 
-# ============================
-# RAM XOTIRA
-# ============================
-user_mode = {}          # video / file
-user_rejim = {}         # hardoim / raqamli / qoldirish
-user_text = {}          # matn
-user_rasm = {}          # thumb
-user_queue = {}         # [(type, file_id, name)]
-user_last = {}          # timestamp
-user_ignore_limit = {}  # cheklovdan ozod
+# RAM
+user_mode = {}
+user_rejim = {}
+user_text = {}
+user_rasm = {}
+user_queue = {}
+user_last = {}
+user_ignore_limit = {}
 
 limit_video = 0
 limit_file = 0
@@ -64,15 +59,19 @@ def start_cmd(msg):
     if uid in ADMINS:
         kb.row("Boshqarish")
 
-    bot.send_message(
-        uid,
-        "Iltimos Fayl yoki Video yuborishdan oldin pastdagi tugmalardan foydalaning.",
-        reply_markup=kb
-    )
+    bot.send_message(uid, "Fayl yoki Video tanlang:", reply_markup=kb)
 
-    # tozalash
     for d in [user_mode, user_rejim, user_text, user_rasm, user_queue, user_last]:
         d.pop(uid, None)
+
+# ============================
+# /deletthumb
+# ============================
+@bot.message_handler(commands=['deletthumb'])
+def deletthumb(msg):
+    uid = msg.from_user.id
+    user_rasm.pop(uid, None)
+    bot.send_message(uid, "Rasm (thumb) o‘chirildi ✅")
 
 # ============================
 # RASM QABUL QILISH
@@ -81,7 +80,7 @@ def start_cmd(msg):
 def rasm_qabul(msg):
     uid = msg.from_user.id
     user_rasm[uid] = msg.photo[-1].file_id
-    bot.reply_to(msg, "Rasm qabul qilindi ✅")
+    bot.reply_to(msg, "Rasm qabul qilindi (thumb sifatida ishlatiladi) ✅")
 
 # ============================
 # VIDEO / FAYL TANLASH
@@ -92,15 +91,9 @@ def bolim(msg):
     user_mode[uid] = "video" if msg.text == "Video" else "file"
 
     kb = telebot.types.InlineKeyboardMarkup()
-    kb.add(
-        telebot.types.InlineKeyboardButton("Hardoim", callback_data="rejim_hardoim")
-    )
-    kb.add(
-        telebot.types.InlineKeyboardButton("Raqamli", callback_data="rejim_raqamli")
-    )
-    kb.add(
-        telebot.types.InlineKeyboardButton("Shunday qoldirish", callback_data="rejim_qoldirish")
-    )
+    kb.add(telebot.types.InlineKeyboardButton("Hardoim", callback_data="rejim_hardoim"))
+    kb.add(telebot.types.InlineKeyboardButton("Raqamli", callback_data="rejim_raqamli"))
+    kb.add(telebot.types.InlineKeyboardButton("Shunday qoldirish", callback_data="rejim_qoldirish"))
 
     if help_url:
         kb.add(telebot.types.InlineKeyboardButton("Chunmadingizmi?", url=help_url))
@@ -123,17 +116,14 @@ def rejim_handler(call):
 
     elif call.data == "rejim_raqamli":
         user_rejim[uid] = "raqamli"
-        bot.send_message(uid,
-            "Nomni yozing va raqam joyiga {raqam} qo‘ying.\n"
-            "Masalan: Anime Naruto {raqam}"
-        )
+        bot.send_message(uid, "Nomni yozing va {raqam} qo‘ying:")
         bot.register_next_step_handler(call.message, raqamli_text)
 
     elif call.data == "rejim_qoldirish":
         user_rejim[uid] = "qoldirish"
         user_queue[uid] = []
         user_last[uid] = time.time()
-        bot.send_message(uid, "Endi video/fayllarni tashlang. Tugatsangiz /tamom deb yozing.")
+        bot.send_message(uid, "Endi video/fayllarni tashlang. /tamom deb yozing.")
 
 # ============================
 # HARDOIM MATN
@@ -143,7 +133,7 @@ def hardoim_text(msg):
     user_text[uid] = msg.text
     user_queue[uid] = []
     user_last[uid] = time.time()
-    bot.send_message(uid, "Endi video/fayllarni tashlang. Tugatsangiz /tamom deb yozing.")
+    bot.send_message(uid, "Endi video/fayllarni tashlang.")
 
 # ============================
 # RAQAMLI MATN
@@ -158,7 +148,7 @@ def raqamli_text(msg):
     user_text[uid] = matn
     user_queue[uid] = []
     user_last[uid] = time.time()
-    bot.send_message(uid, "Endi video/fayllarni tashlang. Tugatsangiz /tamom deb yozing.")
+    bot.send_message(uid, "Endi video/fayllarni tashlang.")
 
 # ============================
 # MEDIA QABUL QILISH
@@ -180,10 +170,10 @@ def media_qabul(msg):
 
     user_last[uid] = time.time()
 
-    bot.reply_to(msg, "Qabul qilindi. Agar tamom bo‘lsa /tamom deb yozing.")
+    bot.reply_to(msg, "Qabul qilindi. /tamom deb yozing.")
 
 # ============================
-# /TAMOM
+# /TAMOM — FAYL NOMINI HAQIQIY O‘ZGARTIRISH
 # ============================
 @bot.message_handler(commands=['tamom'])
 def tamom_cmd(msg):
@@ -216,11 +206,19 @@ def tamom_cmd(msg):
         else:
             new_name = old_name
 
-        if turi == "video":
-            bot.send_video(uid, file_id, caption=new_name, thumb=rasm)
-        else:
-            bot.send_document(uid, file_id, caption=new_name)
+        # FAYL NOMINI HAQIQIY O‘ZGARTIRISH
+        file_info = bot.get_file(file_id)
+        downloaded = bot.download_file(file_info.file_path)
 
+        with open(new_name, "wb") as f:
+            f.write(downloaded)
+
+        if turi == "video":
+            bot.send_video(uid, open(new_name, "rb"), caption=new_name, thumb=rasm)
+        else:
+            bot.send_document(uid, open(new_name, "rb"), caption=new_name)
+
+        os.remove(new_name)
         counter += 1
 
     bot.send_message(uid, "Barcha fayllar yuborildi ✅")
